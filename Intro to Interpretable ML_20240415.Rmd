@@ -1,0 +1,330 @@
+---
+title: "Introduction to IML"
+author: "David Leydet"
+date: "2024-04-15"
+output:
+ html_document:
+   toc: yes
+   toc_depth: 3
+   theme: yeti
+   toc_float: yes
+---
+
+
+# **Introduction**
+
+This code below works through the iml package. The code and examples are from cran's website [C-RAN-Link](https://cran.r-project.org/web/packages/iml/vignettes/intro.html).
+
+
+Machine learning models usually perform really well for predictions, but are not interpretable. The iml package provides tools for analysing any black box machine learning model:
+
+Feature importance: Which were the most important features?
+
+Feature effects: How does a feature influence the prediction? (Accumulated local effects, partial dependence plots and individual conditional expectation curves)
+
+Explanations for single predictions: How did the feature values of a single data point affect its prediction? (LIME and Shapley value)
+
+Surrogate trees: Can we approximate the underlying black box model with a short decision tree?
+
+The iml package works for any classification and regression machine learning model: random forests, linear models, neural networks, xgboost, etc.
+
+This document shows you how to use the iml package to analyse machine learning models.
+
+If you want to learn more about the technical details of all the methods, read chapters from: [Chris Git Hub](https://christophm.github.io/interpretable-ml-book/agnostic.html)
+
+
+# **Data**
+
+This example uses the Boston housing dataset.
+
+
+```{r Data}
+
+data("Boston", package = "MASS")
+
+head(Boston)
+
+```
+
+
+
+# Fitting the ML Model**
+
+Use a randomForset to precit the Boston median housing value:
+
+```{r Package Load, message=FALSE}
+set.seed(42)
+
+library(iml) #interpretable machine learning package
+library(randomForest)
+
+
+```
+
+
+
+```{r Fit the Model}
+
+##Random Forest Train
+rf <- randomForest(medv ~ ., data = Boston, ntree = 10)
+
+```
+
+
+
+# **Using the iml Predictor() container**
+
+We create a Predictor object, that holds the model and the data. The iml package uses R6 classes: New objects can be created by calling Predictor$new().
+
+```{r Predictor Container}
+## Create a dataframe that has all of the features except the target
+## In this case, remove the median house value (medv)
+x = Boston[which(names(Boston) != "medv")]
+
+## Store the data and medv in the Predictor() container
+## parameters are the model - in this case rf
+## the data - in this case the new data frame without medv - x
+## and the target - the medv in the Boston data frame
+predictor = Predictor$new(model = rf,
+                          data = x,
+                          y = Boston$medv)
+
+```
+
+
+# **Feature Importance**
+
+We can measure how important each feature was for the predictions with FeatureImp. The feature importance measure works by shuffling each feature and measuring how much the performance drops. For this regression task we choose to measure the loss in performance with the mean absolute error (‘mae’), another choice would be the mean squared error (‘mse’).
+
+Once we create a new object of FeatureImp, the importance is automatically computed. We can call the plot() function of the object or look at the results in a data.frame.
+
+```{r Feature Importance, message=FALSE}
+## Store the features in a FeatureImp object
+## loss argument specifies the performance measure for error
+imp = FeatureImp$new(predictor = predictor,
+                     loss = "rmse")
+
+```
+
+
+
+```{r Importance Visualization}
+## Visualize the importance using ggplot2
+library(ggplot2)
+
+##Plot
+plot(imp)
+
+```
+
+
+```{r Importance Results}
+## View the the feature importance percentiles
+imp$results
+
+```
+
+
+# **Feature Effects**
+
+Besides knowing which features were important, we are interested in how the features influence the predicted outcome. The FeatureEffect class implements accumulated local effect plots, partial dependence plots and individual conditional expectation curves. The following plot shows the accumulated local effects (ALE) for the feature ‘lstat’. ALE shows how the prediction changes locally, when the feature is varied. The marks on the x-axis indicates the distribution of the ‘lstat’ feature, showing how relevant a region is for interpretation (little or no points mean that we should not over-interpret this region).
+
+```{r ALE Plot}
+## Reminder this allows us to interpret areas of the curve that may be more important than others
+##grid.size argument is the number of quantiles specified
+
+ale = FeatureEffect$new(predictor = predictor,
+                        feature = "lstat",
+                        grid.size = 10)
+
+ale$plot()
+```
+
+If we want to compute the partial dependence curves on another feature, we can simply reset the feature:
+
+```{r Feature reset}
+##Reset the feature to number of rooms per dwelling (rm)
+ale$set.feature("rm")
+
+##Replot
+ale$plot()
+
+```
+
+
+# **Measure Interactions**
+
+We can also measure how strongly features interact with each other. The interaction measure regards how much of the variance of f(x) is explained by the interaction. The measure is between 0 (no interaction) and 1 (= 100% of variance of f(x) due to interactions). For each feature, we measure how much they interact with any other feature:
+
+
+```{r Interactions}
+##Set up the interactions wrapper
+##Play around with grid.size
+
+interact = Interaction$new(predictor = predictor,
+                           grid.size = 15)
+
+```
+
+```{r Plot Interactions}
+##Plot the features to see how the interact with any other feature in the data
+plot(interact)
+
+```
+
+
+We can also specify a feature and measure all it’s 2-way interactions with all other features:
+
+```{r Two-way interactions}
+## See how the features interact with crim
+
+interact <- Interaction$new(predictor = predictor,
+                            feature = "crim",
+                            grid.size = 15)
+
+# Visualize
+plot(interact)
+
+```
+
+
+You can also plot the feature effects for all features at once:
+
+```{r Plot Feature Effects - All}
+##Plot all of the feature effects at once
+
+effs = FeatureEffects$new(predictor = predictor,
+                          grid.size = 10)
+
+# Visualize
+plot(effs)
+
+```
+
+
+# **Surrogate Model**
+
+Another way to make the models more interpretable is to replace the black box with a simpler model - a decision tree. We take the predictions of the black box model (in our case the random forest) and train a decision tree on the original features and the predicted outcome. The plot shows the terminal nodes of the fitted tree. The maxdepth parameter controls how deep the tree can grow and therefore how interpretable it is.
+
+
+```{r Surrogate Model}
+
+tree = TreeSurrogate$new(predictor = predictor,
+                         maxdepth = 2)
+
+
+# Visualize
+plot(tree)
+
+```
+
+
+```{r Plot The RF Tree}
+
+# Use this code to plot the random forest tree itself
+plot(tree$tree)
+
+```
+
+
+We can use the tree to make predictions:
+
+```{r Surrogate Predictions}
+
+head(tree$predict(Boston))
+
+```
+
+## **PDPs with iml**
+
+```{r PDPs}
+# Testing the iml package to draw pdps
+
+#lstat variable as an example
+#store it in an object
+rf.lstat = Partial$new(predictor = predictor,
+                        feature = "lstat",
+                        aggregation = "pdp",
+                        ice = TRUE)
+
+# center (this centers the impact of y hat on a starting value)
+# in this case it centers it at the minimum value for Boston lstat and the curve is the deviation from this value
+rf.lstat$center(min(Boston$lstat))
+
+# plot
+p1 = plot(rf.lstat) + ggtitle("Random Forest")
+
+p1
+
+```
+
+Is the yellow line the average lstat pdp? I think so.
+
+
+# **Explain Single Predictions with a local model**
+
+
+Global surrogate model can improve the understanding of the global model behaviour. We can also fit a model locally to understand an individual prediction better. The local model fitted by LocalModel is a linear regression model and the data points are weighted by how close they are to the data point for which we want to explain the prediction.
+
+
+```{r Local Model}
+
+##Looking at the first row of our dataframe
+lime.explain = LocalModel$new(predictor = predictor,
+                              x.interest = x[1,])
+
+# View results
+lime.explain$results
+
+
+```
+
+
+```{r Plot Local Model}
+
+plot(lime.explain)
+
+```
+
+# **Explain single predictions with game theory**
+
+An alternative for explaining individual predictions is a method from coalitional game theory named Shapley value. Assume that for one data point, the feature values play a game together, in which they get the prediction as a payout. The Shapley value tells us how to fairly distribute the payout among the feature values.
+
+
+```{r Shapley Value}
+
+shapley = Shapley$new(predictor = predictor,
+                      x.interest = x[1,],
+                      sample.size = 50)
+
+# Visualize
+shapley$plot()
+
+```
+
+```{r Shapley Value 2}
+##Reuse the shapley object to explain other data points
+shapley$explain(x.interest = x[2,])
+
+#visualize
+shapley$plot()
+```
+
+
+
+The results in data.frame form can be extracted like this:
+
+```{r Shapley Results Dataframe}
+
+results = shapley$results
+
+head(results)
+```
+
+
+
+
+
+
+
+
