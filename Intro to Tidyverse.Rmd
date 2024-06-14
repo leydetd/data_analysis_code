@@ -1,0 +1,703 @@
+---
+title: "Intro to Tidyverse"
+author: "David Leydet"
+date: "2024-04-18"
+output: 
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float: 
+      collapsed: false
+      smooth_scroll: false
+    theme: bootstrap
+    df_print: paged
+   
+---
+
+# **Introduction to Tidyverse**
+
+This code is a brief introduction to Tidyverse. Adapted from the Guide to R Book available at the following [link](https://bookdown.org/yih_huynh/Guide-to-R-Book/tidyverse.html).
+
+Tidyverse is a group of packages (dplyr and ggplot2) that can be used for data management, cleaning, and initial visualizations.
+
+
+# **Set up**
+
+Set up your working directory and load the appropriate packages.
+
+```{r Setup}
+# set working directory
+
+setwd("~/Desktop/University of Utah PhD /Research/r_code/")
+
+# load libraries
+
+library(tidyverse)
+
+
+```
+
+
+
+# **Diamonds Dataset Load**
+
+```{r diamonds load}
+# this example uses the diamonds dataset 
+# this data comes with the ggplot2 library
+
+diamonds = diamonds
+
+```
+
+
+We can explore the basic structure of the data using the str(), names(), and View() functions.
+
+```{r str}
+# data structure, variable names, and count of the observations and features
+str(diamonds)
+```
+
+```{r names}
+# variable names
+names(diamonds)
+```
+
+```{r View}
+# view the dataframe like an excel sheet
+
+#View(diamonds)
+```
+
+
+Printing the dataframe to view the html "df_print" options.
+- paged: pageable table!
+- paged options are entered in the chunk headers
+    + max.print
+    + rows.print
+    + cols.print
+    + cols.min.print
+    + pages.print
+    + paged.print
+    + rownames.print
+    
+These options are located at the R Markdown Definitive Guide located [here!](https://bookdown.org/yihui/rmarkdown/html-document.html)
+
+
+```{r Print}
+
+diamonds
+
+```
+
+
+# **Basic Data Management**
+
+## **Mutate**
+
+What it does: Adds new columns or modifies current variables in the dataset.
+
+Let’s say I want to create three new variables in the diamonds dataset (described in Section5) :
+
+- One variable called JustOne where all of the values inside the column are 1.
+
+- One variable called Values where all of the values inside are something:
+
+- One variable called Simple where all the values equal TRUE
+
+
+
+```{r mutate}
+# this code above would add the columns, but they would not be "saved" in the actual dataframe
+#diamonds |>
+                #mutate(JustOne = 1,
+                #Values = "something",
+                #Simple = TRUE)
+
+
+
+## if you want the changes to stay, you need to create a new tibble/data frame with the changes
+diamonds.new = diamonds |>
+                mutate(JustOne = 1,
+                Values = "something",
+                Simple = TRUE)
+
+str(diamonds.new)
+
+```
+
+
+mutate() can be used to create variables based on existing variables from the dataset.
+
+Let’s use the existing variable price from the diamonds dataset to create a new column/variable named price200. The values for price200 calculated from price minus $200 (price is a default variable in diamonds):
+
+
+```{r mutate 2}
+# One column add
+diamonds.new = diamonds.new %>% 
+  mutate(price200 = price - 200)
+
+# Check
+str(diamonds.new)
+
+```
+
+
+```{r mutate 3}
+# multiple column add 
+
+diamonds.new = diamonds.new |>
+  mutate(price20perc = price*0.2,
+         price20percoff = price*0.8,
+         pricepercarat = price/carat,
+         pizza = depth^2)
+
+# Check
+str(diamonds.new)
+
+```
+
+### **Nesting Functions**
+
+We can also use other functions inside mutate() to create our new variable(s). For example, we might use the mean() function to calculate the average price value for all diamonds in the dataset. This is called nesting, where one function (mean()) “nests” inside another function (mutate()).
+
+The example below creates four new columns to the diamonds dataset that calculate the mean, standard deviation, standard error, and median price value for all diamonds. The values in these columns will be the same for every row because R takes all of the values in price to calculate the mean/standard deviation/median.
+
+```{r Nesting}
+
+diamonds.new = diamonds.new |>
+  mutate(m = mean(price),
+         sd = sd(price),
+         med = median(price))
+
+
+str(diamonds.new)
+
+
+```
+
+
+
+### **case_match() and recode()**
+
+What it does: modifies the values within a variable. Here is the basic structure for using recode:
+
+data %>% mutate(Variable = recode(Variable, "old value" = "new value"))
+
+**NOTE:** recode() has been superseded by case_match() and case_when(). Unmatched values "fall through" as a missing value in case_match(). Use ".default=" argument to retain the rest of the vector unchanged.
+
+See [dplyr.tidyverse](https://dplyr.tidyverse.org/reference/case_match.html) for more details.
+
+```{r case match}
+# create a new cut column (cut.new) and change Ideal to IDEAL
+
+diamonds.new = diamonds.new |>
+  mutate(cut.new = case_match(cut,
+                              "Ideal" ~ "IDEAL",
+                              .default = diamonds.new$cut)) # retains the unchanged vector
+
+# Check
+str(diamonds.new)
+
+```
+
+
+Most commonly this tool is used to adjust inconsistent labeling
+
+```{r case match example}
+## Generate a new dataset
+
+# Purposefully introduce inconsistent labeling
+Sex <- factor(c("male", "m", "M", "Female", "Female", "Female"))
+
+TestScore <- c(10, 20, 10, 25, 12, 5)
+
+dataset <- tibble(Sex, TestScore)
+
+str(dataset)
+
+
+
+```
+
+
+```{r case matche example 2}
+# fix the labeling using case match and mutate
+dataset.new = dataset |>
+  mutate(Sex.new = case_match(Sex,
+             c("male", "M", "m") ~ "Male",
+             .default = dataset$Sex))
+
+str(dataset.new)
+
+```
+
+
+## **summarize()**
+
+What it does: collapses all rows and returns a one-row summary. R will recognize both the British and American spelling (summarise/summarize).
+
+```{r}
+diamonds.sum = diamonds.new %>% 
+  summarize(avg.price = mean(price),
+            avg.carat = mean(carat),
+            st.dev.price = sd(price))
+
+#view 
+diamonds.sum
+
+```
+
+
+## **group_by()**
+
+Takes existing data and groups specific variables together for future operations. Many operations are performed on groups.
+
+Example: Grouping by age and sex (male/female) might be useful in a dataset if we care about how females of a certain age scored compared to males of a certain age (or comparing ages within males or within females).
+
+Let’s create a sample dataset to reflect this example (to avoid entry errors, copy and paste this into your script):
+
+```{r group by}
+## Creating identification number to represent 50 individual people
+ID <- c(1:50)
+
+## Creating sex variable (25 males/25 females)
+Sex <- rep(c("male", "female"), 25) # rep stands for replicate
+
+## Creating age variable (20-39 year olds)
+Age <- c(26, 25, 39, 37, 31, 34, 34, 30, 26, 33, 
+         39, 28, 26, 29, 33, 22, 35, 23, 26, 36, 
+         21, 20, 31, 21, 35, 39, 36, 22, 22, 25, 
+         27, 30, 26, 34, 38, 39, 30, 29, 26, 25, 
+         26, 36, 23, 21, 21, 39, 26, 26, 27, 21) 
+
+## Creating a dependent variable called Score
+Score <- c(0.010, 0.418, 0.014, 0.090, 0.061, 0.328, 0.656, 0.002, 0.639, 0.173, 
+           0.076, 0.152, 0.467, 0.186, 0.520, 0.493, 0.388, 0.501, 0.800, 0.482, 
+           0.384, 0.046, 0.920, 0.865, 0.625, 0.035, 0.501, 0.851, 0.285, 0.752, 
+           0.686, 0.339, 0.710, 0.665, 0.214, 0.560, 0.287, 0.665, 0.630, 0.567, 
+           0.812, 0.637, 0.772, 0.905, 0.405, 0.363, 0.773, 0.410, 0.535, 0.449)
+
+## Creating a unified dataset that puts together all variables
+data <- tibble(ID, Sex, Age, Score)
+
+
+```
+
+
+The example below groups our example dataframe by sex to display the average score (m), standard deviation (s), and number of participants (n).
+```{r group by 2}
+data.v2 = data %>% 
+  group_by(Sex) %>% 
+  dplyr::summarize(m = mean(Score),
+                   s = sd(Score),
+                   n = dplyr::n()) %>% 
+  ungroup()
+
+
+#view
+data.v2
+
+```
+
+The code below replicates this but also groups by age
+
+```{r group 3}
+
+data %>% 
+  group_by(Sex, Age) %>% 
+  dplyr::summarize(m = mean(Score),
+                   s = sd(Score),
+                   n = dplyr::n()) %>% 
+  ungroup()
+
+```
+
+### **mutate() and group_by()**
+
+Adding new columns based on groups.
+
+```{r group by mutate}
+data %>% 
+  dplyr::group_by(Sex) %>% 
+  dplyr::mutate(m = mean(Score)) %>% 
+  ungroup()
+
+
+```
+
+
+### **dplyr example**
+Let’s say that I want calculate/compare the average Score (and other measures) for males and females separately:
+
+```{r group by example}
+# This example is from dplyr's website (https://dplyr.tidyverse.org/reference/group_by.html)
+
+mtcars = mtcars
+
+# group by cylinder
+
+by_cyl = mtcars %>% 
+  group_by(cyl)
+
+# Check
+# grouping doesn't change how the data looks (apart from listing
+# how it's grouped)...noticed it says groups cyl(3) when you check
+by_cyl
+
+```
+
+```{r group by example 2}
+# It changes how it acts with the other dplyr verbs:
+by_cyl %>% 
+  dplyr::summarize(disp = mean(disp),
+            hp = mean(hp))
+
+
+```
+
+```{r Transactions Example 1}
+
+transactions <- tibble(
+  company = c("A", "A", "A", "B", "B", "B"),
+  year = c(2019, 2019, 2020, 2021, 2023, 2023),
+  revenue = c(20, 50, 4, 10, 12, 18)
+)
+
+transactions
+
+```
+
+```{r Transaction example 2}
+transactions |>
+  group_by(company, year) |>
+  dplyr::mutate(total = sum(revenue))
+
+
+```
+
+
+
+**Ensure you always ungroup after grouping**
+**Ensure you use the right summarize (from dplyr)**
+
+
+## **filter()**
+
+Function: Only retain specific **rows** of data that meet the specified requirement(s).
+
+```{r Filter 1}
+##only display diamonds from the diamonds dataset that have a cut of fair
+
+diamonds |> filter(cut == "Fair")
+
+```
+
+Only display data from diamonds that have a cut value of Fair or Good and a price at or under $600 (notice how the or statement is obtained with | while the and statement is achieved through a comma):
+
+
+```{r Filter 2}
+## boolean operator or is |
+## boolean operator and is ,
+
+diamonds %>% 
+  filter(cut == "Fair" | cut == "Good", price <= 600)
+
+```
+
+An alternative method to the code above:
+
+```{r Filter 3}
+# reads show me the cut values that match the vector inside AND price less than or equal to 600
+
+diamonds |> 
+  filter(cut %in% c("Fair", "Good"), price <= 600)
+
+```
+
+
+Only display data that does NOT have a cut of Fair
+
+```{r Filter 4}
+
+diamonds |>
+  filter(cut != "Fair")
+
+```
+
+
+## **select()**
+
+Function: Select only the **columns (variables)** that you want to see. Gets rid of all other columns. You can to refer to the columns by the column position (first column) or by name. The order in which you list the column names/positions is the order that the columns will be displayed.
+
+
+```{r select 1}
+# retain cut and color
+
+diamonds %>% 
+  select(cut, color)
+
+
+```
+
+
+
+```{r select 2}
+# select first five columns
+diamonds %>% 
+  select(1:5)
+
+```
+
+
+
+```{r select 3}
+# select all but the cut column
+
+diamonds %>% 
+  select(-cut)
+
+```
+
+
+```{r select 4}
+# select all columns except cut and color
+
+diamonds %>% 
+  select(-cut, -color)
+
+```
+
+```{r select 5}
+# retain all of the columns bet rearrange the columns to appear at the beginning
+
+diamonds %>% 
+  select(x, y, z, everything())
+
+```
+
+
+## **arrange()**
+
+Function: Allows you arrange values within a variable in ascending or descending order (if that is applicable to your values). This can apply to both numerical and non-numerical values.
+
+```{r arrange 1}
+# arrange cut by alphabetical order (A-Z)
+
+diamonds %>% 
+  arrange(cut)
+  
+
+```
+
+
+```{r arrange 2}
+# arrange price by numerical order (lowest to highest)
+
+diamonds %>% 
+  arrange(price)
+
+```
+
+
+```{r arrange 3}
+# arrange in descending order
+
+diamonds %>% 
+  arrange(desc(cut))
+
+```
+
+See [link here](https://bookdown.org/yih_huynh/Guide-to-R-Book/arrange.html#exercises-6) for more practice!
+
+
+# **Advanced Data Management**
+
+## **count()**
+
+What it does: Collapses the rows and counts the number of observations per group of values.
+
+
+```{r count 1}
+# count the number of values for each cut
+
+diamonds %>% count(cut) 
+
+# is the same as
+
+diamonds %>% group_by(cut) %>% count()
+
+# is the same as
+
+diamonds %>% 
+  group_by(cut) %>% 
+  dplyr::summarize(n = n())
+
+
+```
+
+
+```{r count 2}
+# count the number of values for each cut and color
+
+diamonds %>% 
+  count(cut, clarity)
+
+# is the same as
+diamonds %>% group_by(cut, clarity) %>% count()
+diamonds %>% group_by(cut, clarity) %>% dplyr::summarize(n = n())
+
+```
+
+
+## **rename()**
+
+What it does: Renames a column/variable. Reminder that the new label goes **first**!
+
+
+```{r rename 1}
+# renames the price variable to PRICE
+
+diamonds %>% 
+  rename(PRICE = price)
+
+# is the same as
+
+diamonds %>% 
+  mutate(PRICE = price) %>% # creates new variable based on old variable
+  select(-price) # removes old variable from dataset
+
+```
+
+
+```{r rename 2}
+# Renames the x, y, z variables to length, width, and depth (see ?diamonds):
+
+diamonds %>% 
+  rename(length = x, width = y, depth.z = z)
+
+# is the same as
+
+diamonds %>% 
+  mutate(length = x, width = y, depth.z = z) %>% 
+  select(-x, -y, -z)
+
+```
+
+
+## **row_number()**
+
+Using row_number() with mutate() will create a column of consecutive numbers. The row_number() function is useful for creating an identification number (an ID variable). It is also useful for labeling each observation by a grouping variable.
+
+
+```{r row num 1}
+## practice dataset 
+
+practice <- 
+  tibble(Subject = rep(c(1,2,3),8),
+         Date = c("2019-01-02", "2019-01-02", "2019-01-02", 
+                  "2019-01-03", "2019-01-03", "2019-01-03",
+                  "2019-01-04", "2019-01-04", "2019-01-04", 
+                  "2019-01-05", "2019-01-05", "2019-01-05", 
+                  "2019-01-06", "2019-01-06", "2019-01-06", 
+                  "2019-01-07", "2019-01-07", "2019-01-07",
+                  "2019-01-08", "2019-01-08", "2019-01-08",
+                  "2019-01-01", "2019-01-01", "2019-01-01"),
+         DV = c(sample(1:10, 24, replace = T)),
+         Inject = rep(c("Pos", "Neg", "Neg", "Neg", "Pos", "Pos"), 4))
+
+```
+
+
+Using the practice dataset, let’s add a variable called Session. Each session is comprised of 1 positive day and 1 negative day closest in date. For example, the first observation of Inject = pos and the first observation where Inject = neg will both have a Session value of 1; the second observation of Inject = pos and the second observation of Inject = neg will be session 2). In the code below, you will see three methods for creating Session. Which method produces the result we need?
+
+
+```{r row num 2}
+
+## Method1
+practice %>% 
+  mutate(Session = row_number())
+
+```
+
+
+```{r row num 3}
+## Method2
+practice %>% 
+  group_by(Subject, Inject) %>%
+  mutate(Session = row_number())
+```
+
+
+```{r row num 4}
+
+## Method3
+practice %>% 
+  group_by(Subject, Inject) %>%
+  arrange(Date) %>%  
+  mutate(Session = row_number())
+
+
+```
+
+
+## **ifelse()**
+
+Using the practice dataset from before, create a new variable called Health with values of sick or healthy:
+
+Subject 1 is sick
+
+Subject 2 is healthy
+
+Subject 3 is healthy
+
+
+```{r if 1}
+## Method 1
+
+## reads: add (mutate) a variable "Health"; if the Subject is number 1 then assign a value of sick, if not assign a value of healthy.
+
+practice %>% 
+  mutate(Health = ifelse(Subject == 1, "sick", "healthy"))
+
+```
+
+
+```{r if 2}
+# method 2
+
+# reads: in the practice dataset, add (mutate) a variable/column "Health"; if the subject is in the vector (2,3) [aka if the subject is 2 or 3], assign a value of healthy. If not, assign a value of sick. 
+
+practice %>% 
+  mutate(Health = ifelse(Subject %in% c(2,3), "healthy", "sick"))
+
+```
+
+
+```{r if 3}
+# method 3
+
+practice %>% 
+  mutate(Health = ifelse(Subject == 1,
+                         "sick",
+                         ifelse(Subject %in% c(2,3),
+                                "healthy",
+                                "wtf")))
+
+
+```
+
+```{r if 4}
+
+## Method 4
+practice %>% 
+  mutate(Health = ifelse(Subject == 1,
+                         "sick",
+                         ifelse(Subject == 2,
+                                "healthy",
+                                "wtf")))
+
+```
+
+
+
+
