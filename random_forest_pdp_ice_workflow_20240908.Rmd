@@ -35,7 +35,9 @@ De Cock, D. (2011). "Ames, Iowa: Alternative to the Boston Housing Data as an En
 
 ```{r}
 library(tidymodels)
-library(DALEXtra)
+library(DALEXtra) # DALEX is an R package with a set of tools that help to provide Descriptive mAchine Learning EXplanations ranging from global to local interpretability methods.
+
+# https://uc-r.github.io/dalex
 
 
 data(ames)
@@ -96,6 +98,11 @@ explainer_rf <- explain_tidymodels(
 pdp_rf <- model_profile(explainer_rf, N = NULL, 
                         variables = "Gr_Liv_Area", groups = "Bldg_Type")
 
+```
+
+
+```{r}
+
 as_tibble(pdp_rf$agr_profiles) %>%
     mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_")) %>%
     ggplot(aes(`_x_`, `_yhat_`, color = `_label_`)) +
@@ -110,12 +117,134 @@ as_tibble(pdp_rf$agr_profiles) %>%
 ```
 
 
+# **Conflict Data Experiment**
+
+Attempt one to recreate the pdp plots in our HMA random forest by country.
+
+
+```{r, message=FALSE}
+library(tidymodels)
+library(DALEXtra) # DALEX is an R package with a set of tools that help to provide Descriptive mAchine Learning EXplanations ranging from global to local interpretability methods.
+
+# https://uc-r.github.io/dalex
+
+## read data in
+library(tidyverse)
+
+# load cleaned data
+adm.imp = read.csv("../cleaned_data/hma_adm1_imp_df_clean_20240418.csv")
+
+
+# remove row number variable (X) from df
+adm.imp = adm.imp %>% 
+  select(-X)
+
+# factor country and adm 1
+adm.imp$country = as.factor(adm.imp$country)
+adm.imp$adm1 = as.factor(adm.imp$adm1)
+
+# check
+str(adm.imp)
+
+
+```
+
+
+```{r}
+#rf model setup using parsnip package
+
+rf_model <- 
+    rand_forest(trees = 1000) %>% 
+    set_engine("ranger") %>% 
+    set_mode("regression")
+
+```
+
+
+```{r}
+#workflow framework to run the random forest
+
+rf_wflow <- 
+    workflow() %>% 
+    add_formula(
+        con ~ .) %>% 
+    add_model(rf_model) 
+
+```
+
+```{r}
+
+## fit the data from our data frame of interest (in this case the ames_train data) to our workflow and model
+rf_fit <- rf_wflow %>% fit(data = adm.imp)
+
+```
+
+
+```{r}
+
+# explainer - unified representation of the model which can be used with various "explainers"
+explainer_rf <- explain_tidymodels(
+    rf_fit, 
+    data = dplyr::select(adm.imp, -con), # data frame without the target variable
+    y = adm.imp$con, # target variable
+    label = "random forest"
+)
 
 
 
+```
 
 
+```{r}
 
+pdp_rf <- model_profile(explainer_rf, N = NULL, 
+                        variables = "pop", groups = "country")
+
+# explainer - I think you can only select one variable to look at pdp wise, then group it by a categorical variable, in this case group by country.
+
+```
+
+
+```{r}
+
+as_tibble(pdp_rf$agr_profiles) %>%
+    mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_")) %>%
+    ggplot(aes(`_x_`, `_yhat_`, color = `_label_`)) +
+    geom_line(size = 1.2, alpha = 0.8) +
+    labs(x = "Population", 
+         y = "Conflict Count", 
+         color = NULL,
+         title = "Partial dependence profile for conflict",
+         subtitle = "Predictions from a random forest model")
+
+
+```
+
+
+```{r}
+
+pdp_rf2 <- model_profile(explainer_rf, N = NULL, 
+                        variables = "polstab", groups = "country")
+
+# explainer - I think you can only select one variable to look at pdp wise, then group it by a categorical variable, in this case group by country.
+
+```
+
+
+```{r}
+
+as_tibble(pdp_rf2$agr_profiles) %>%
+    mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_")) %>%
+    ggplot(aes(`_x_`, `_yhat_`, color = `_label_`)) +
+    geom_line(size = 1.2, alpha = 0.8) +
+    labs(x = "Political Stability", 
+         y = "Conflict Count", 
+         color = NULL,
+         title = "Partial dependence profile for conflict",
+         subtitle = "Predictions from a random forest model")
+
+
+```
 
 
 
