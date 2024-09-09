@@ -1,0 +1,122 @@
+---
+title: "Random Forest PDP/ICE Workflow"
+author: "David Leydet"
+date: "2024-09-08"
+output: 
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float: 
+      collapsed: false
+      smooth_scroll: false
+    theme: bootstrap
+    df_print: paged
+   
+---
+
+# **Introduction**
+
+This document contains a draft workflow to building random forests and PD/ICE plots. The workflow includes examples to color the ICE plots by variables.
+
+
+```{r Set Working Directory, echo=FALSE}
+
+setwd("~/Desktop/University of Utah PhD /Research/r_code/")
+
+```
+
+
+
+# **Stack Overflow Examples**
+
+The Ames Housing dataset is from De Cock (2011). It has 82 fields were recorded for 2,930 properties in Ames IA. This version is copies from the AmesHousing package but does not include a few quality columns that appear to be outcomes rather than predictors.
+
+De Cock, D. (2011). "Ames, Iowa: Alternative to the Boston Housing Data as an End of Semester Regression Project," Journal of Statistics Education, Volume 19, Number 3.
+
+```{r}
+library(tidymodels)
+library(DALEXtra)
+
+
+data(ames)
+
+#transmute is an old dplyr function. Mutate is now used.
+#create a data frame with sale price, gr liv area, year built, and bldg type
+ames_train <- ames %>%
+    transmute(Sale_Price = log10(Sale_Price),
+              Gr_Liv_Area = as.numeric(Gr_Liv_Area), 
+              Year_Built, Bldg_Type)
+
+```
+
+
+```{r}
+#rf model setup using parsnip package
+
+rf_model <- 
+    rand_forest(trees = 1000) %>% 
+    set_engine("ranger") %>% 
+    set_mode("regression")
+
+```
+
+
+```{r}
+#workflow framework to run the random forest
+
+rf_wflow <- 
+    workflow() %>% 
+    add_formula(
+        Sale_Price ~ Gr_Liv_Area + Year_Built + Bldg_Type) %>% 
+    add_model(rf_model) 
+
+```
+
+```{r}
+
+## fit the data from our data frame of interest (in this case the ames_train data) to our workflow and model
+rf_fit <- rf_wflow %>% fit(data = ames_train)
+
+
+# explainer - unified representation of the model which can be used with various "explainers"
+explainer_rf <- explain_tidymodels(
+    rf_fit, 
+    data = dplyr::select(ames_train, -Sale_Price), 
+    y = ames_train$Sale_Price,
+    label = "random forest"
+)
+
+
+
+```
+
+
+```{r}
+
+pdp_rf <- model_profile(explainer_rf, N = NULL, 
+                        variables = "Gr_Liv_Area", groups = "Bldg_Type")
+
+as_tibble(pdp_rf$agr_profiles) %>%
+    mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_")) %>%
+    ggplot(aes(`_x_`, `_yhat_`, color = `_label_`)) +
+    geom_line(size = 1.2, alpha = 0.8) +
+    labs(x = "Gross living area", 
+         y = "Sale Price (log)", 
+         color = NULL,
+         title = "Partial dependence profile for Ames housing sales",
+         subtitle = "Predictions from a random forest model")
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
