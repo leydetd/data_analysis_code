@@ -205,21 +205,67 @@ pdp_rf <- model_profile(explainer_rf, N = NULL,
 ```
 
 
-```{r Pop PDP Build 2}
+```{r Pop PDP Build Label Code Version}
+
+
 
 pop.pdp = as_tibble(pdp_rf$agr_profiles) %>%
-    mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_")) %>%
-    ggplot(aes(`_x_`, `_yhat_`, color = `_label_`)) +
-    geom_line(size = 1.2, alpha = 0.8) +
-    labs(x = "Population", 
-         y = "Conflict Count", 
-         color = NULL,
-         title = "Population PDP")
-         #subtitle = "Predictions from a random forest model")
+    mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_"))
 
-pop.pdp
+pop.pdp$label_1 <- NA
+
+pop.pdp$label_1 <- as.character(pop.pdp$label_1)
+
+for(i in 1:length(unique(pop.pdp$`_label_`))) {
+  
+  pop.pdp[which(pop.pdp$`_label_` == 
+                    unique(pop.pdp$`_label_`)[i]), "label_1"][100, ] <- unique(pop.pdp$`_label_`)[i]
+}
+
+  
+```
+
+```{r Pop PDP Build Label Code Version}
+
+library(ggrepel)
+
+pop.plot = ggplot(pop.pdp, aes(`_x_`, `_yhat_`, color = `_label_`)) +
+  geom_line(size = 1.2, alpha = 0.8, show.legend = FALSE) +
+  labs(x = "Population", 
+       y = "Conflict Count", 
+       color = NULL,
+       title = "Population PDP") +
+  geom_label_repel(aes(label = label_1), show.legend = FALSE)
+
+pop.plot
+
+```
 
 
+```{r PDP Code from Brenna}
+# code for labeling!
+
+#pop.pdp_1 = pop.pdp
+
+#pop.pdp_1$label_1 <- NA
+
+#pop.pdp_1$label_1 <- as.character(pop.pdp_1$label_1)
+
+#for(i in 1:length(unique(pop.pdp_1$`_label_`))) {
+  
+  #pop.pdp_1[which(pop.pdp_1$`_label_` == 
+                    #unique(pop.pdp_1$`_label_`)[i]), "label_1"][100, ] <- unique(pop.pdp_1$`_label_`)[i]
+#}
+
+#library(ggrepel)
+
+#ggplot(pop.pdp_1, aes(`_x_`, `_yhat_`, color = `_label_`)) +
+  #geom_line(size = 1.2, alpha = 0.8, show.legend = FALSE) +
+  #labs(x = "Population", 
+       #y = "Conflict Count", 
+       #color = NULL,
+       #title = "Population PDP") +
+  #geom_label_repel(aes(label = label_1), show.legend = FALSE)
 ```
 
 
@@ -234,21 +280,56 @@ pdp_rf2 <- model_profile(explainer_rf, N = NULL,
 
 
 ```{r Polstab PDP Build 2}
+## **ORIGINAL CODE**
 
-polstab.pdp = as_tibble(pdp_rf2$agr_profiles) %>%
-    mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_")) %>%
-    ggplot(aes(`_x_`, `_yhat_`, color = `_label_`)) +
-    geom_line(size = 1.2, alpha = 0.8) +
-    labs(x = "Political Stability", 
-         y = "Conflict Count", 
-         color = NULL,
-         title = "Political Stability PDP")
+#polstab.pdp = as_tibble(pdp_rf2$agr_profiles) %>%
+    #mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_")) %>%
+    #ggplot(aes(`_x_`, `_yhat_`, color = `_label_`)) +
+    #geom_line(size = 1.2, alpha = 0.8) +
+    #labs(x = "Political Stability", 
+         #y = "Conflict Count", 
+         #color = NULL,
+         #title = "Political Stability PDP")
          #subtitle = "Predictions from a random forest model")
 
-polstab.pdp 
+#polstab.pdp 
 
 ```
+```{r Polstab PDP Build Label Code Version}
 
+
+
+polstab.pdp = as_tibble(pdp_rf2$agr_profiles) %>%
+    mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_"))
+
+polstab.pdp$label_1 <- NA
+
+polstab.pdp$label_1 <- as.character(polstab.pdp$label_1)
+
+for(i in 1:length(unique(polstab.pdp$`_label_`))) {
+  
+  polstab.pdp[which(polstab.pdp$`_label_` == 
+                    unique(polstab.pdp$`_label_`)[i]), "label_1"][78, ] <- unique(polstab.pdp$`_label_`)[i]
+}
+
+  
+```
+
+```{r Polstab PDP Build Label Code Version}
+
+library(ggrepel)
+
+polstab.plot = ggplot(polstab.pdp, aes(`_x_`, `_yhat_`, color = `_label_`)) +
+  geom_line(size = 1.2, alpha = 0.8, show.legend = FALSE) +
+  labs(x = "Political Stability", 
+       y = "Conflict Count", 
+       color = NULL,
+       title = "Political Stability PDP") +
+  geom_label_repel(aes(label = label_1), show.legend = FALSE)
+
+polstab.plot
+
+```
 
 ```{r Temperature PDP Build 1}
 
@@ -261,20 +342,59 @@ pdp_rf3 <- model_profile(explainer_rf, N = NULL,
 
 
 ```{r Temperature PDP Build 2}
+# **ORIGINAL CODE**
 
-temp.pdp = as_tibble(pdp_rf3$agr_profiles) %>%
-    mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_")) %>%
-    ggplot(aes(`_x_`, `_yhat_`, color = `_label_`)) +
-    geom_line(size = 1.2, alpha = 0.8) +
-    labs(x = "Temperature", 
-         y = "Conflict Count", 
-         color = NULL,
-         title = "Temperature PDP")
+#temp.pdp = as_tibble(pdp_rf3$agr_profiles) %>%
+    #mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_")) %>%
+    #ggplot(aes(`_x_`, `_yhat_`, color = `_label_`)) +
+    #geom_line(size = 1.2, alpha = 0.8) +
+    #labs(x = "Temperature", 
+         #y = "Conflict Count", 
+         #color = NULL,
+         #title = "Temperature PDP")
          #subtitle = "Predictions from a random forest model")
 
-temp.pdp 
+#temp.pdp 
 
 ```
+
+
+```{r Temperature PDP Build Label Code Version}
+
+
+
+temp.pdp = as_tibble(pdp_rf3$agr_profiles) %>%
+    mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_"))
+
+temp.pdp$label_1 <- NA
+
+temp.pdp$label_1 <- as.character(temp.pdp$label_1)
+
+for(i in 1:length(unique(temp.pdp$`_label_`))) {
+  
+  temp.pdp[which(temp.pdp$`_label_` == 
+                    unique(temp.pdp$`_label_`)[i]), "label_1"][100, ] <- unique(temp.pdp$`_label_`)[i]
+}
+
+  
+```
+
+```{r Temperature PDP Build Label Code Version}
+
+library(ggrepel)
+
+temp.plot = ggplot(temp.pdp, aes(`_x_`, `_yhat_`, color = `_label_`)) +
+  geom_line(size = 1.2, alpha = 0.8, show.legend = FALSE) +
+  labs(x = "Temperature", 
+       y = "Conflict Count", 
+       color = NULL,
+       title = "Temperature PDP") +
+  geom_label_repel(aes(label = label_1), show.legend = FALSE)
+
+temp.plot
+
+```
+
 
 ```{r Precipitation PDP Build 1}
 
@@ -287,28 +407,63 @@ pdp_rf4 <- model_profile(explainer_rf, N = NULL,
 
 
 ```{r Precipitation PDP Build 2}
+# **ORIGINAL CODE**
 
-precip.pdp = as_tibble(pdp_rf4$agr_profiles) %>%
-    mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_")) %>%
-    ggplot(aes(`_x_`, `_yhat_`, color = `_label_`)) +
-    geom_line(size = 1.2, alpha = 0.8) +
-    labs(x = "Precipitation", 
-         y = "Conflict Count", 
-         color = NULL,
-         title = "Precipitation PDP")
+#precip.pdp = as_tibble(pdp_rf4$agr_profiles) %>%
+    #mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_")) %>%
+    #ggplot(aes(`_x_`, `_yhat_`, color = `_label_`)) +
+    #geom_line(size = 1.2, alpha = 0.8) +
+    #labs(x = "Precipitation", 
+         #y = "Conflict Count", 
+         #color = NULL,
+         #title = "Precipitation PDP")
          #subtitle = "Predictions from a random forest model")
 
-precip.pdp 
+#precip.pdp 
 
 ```
+```{r Precipitation PDP Build Label Code Version}
 
+
+
+precip.pdp = as_tibble(pdp_rf4$agr_profiles) %>%
+    mutate(`_label_` = stringr::str_remove(`_label_`, "random forest_"))
+
+precip.pdp$label_1 <- NA
+
+precip.pdp$label_1 <- as.character(precip.pdp$label_1)
+
+for(i in 1:length(unique(precip.pdp$`_label_`))) {
+  
+  precip.pdp[which(precip.pdp$`_label_` == 
+                    unique(precip.pdp$`_label_`)[i]), "label_1"][100, ] <- unique(precip.pdp$`_label_`)[i]
+}
+
+  
+```
+
+```{r Precipitation PDP Build Label Code Version}
+
+library(ggrepel)
+
+precip.plot = ggplot(precip.pdp, aes(`_x_`, `_yhat_`, color = `_label_`)) +
+  geom_line(size = 1.2, alpha = 0.8, show.legend = FALSE) +
+  labs(x = "Precipitation", 
+       y = "Conflict Count", 
+       color = NULL,
+       title = "Precipitation PDP") +
+  geom_label_repel(aes(label = label_1), show.legend = FALSE)
+
+precip.plot
+
+```
 
 
 
 ```{r Combined PDP Figure - ADM1 missForest}
 library(ggpubr)
 
-ggarrange(pop.pdp, temp.pdp, polstab.pdp, precip.pdp, ncol = 2, nrow = 2, common.legend = TRUE, legend = "right")
+ggarrange(pop.plot, temp.plot, polstab.plot, precip.plot, ncol = 2, nrow = 2)#, common.legend = TRUE, legend = "right")
 
 #gridExtra::grid.arrange(pop.pdp, polstab.pdp, nrow = 2)
 
